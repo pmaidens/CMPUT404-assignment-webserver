@@ -2,6 +2,9 @@
 import SocketServer
 import os
 import gzip
+import StringIO
+import time
+import re
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -32,18 +35,38 @@ import gzip
 class MyWebServer(SocketServer.BaseRequestHandler):
     
     def handle(self):
+
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
+        reSearchResult = re.search(" ([\s\S]+?) ",self.data)
+        requestedFileName = reSearchResult.group(0)
+        requestedFileName = requestedFileName[1:-1]
+        print (requestedFileName)
+
+        if requestedFileName.endswith("/"):
+            requestedFileName = requestedFileName + "index.html"
 
         currentDirectory = os.getcwd()
+        wwwDir = os.path.join(currentDirectory, "www/")
+        print (wwwDir)
+        requestedFileLocation = os.path.join(wwwDir, requestedFileName)
+        print (requestedFileLocation)
 
-        requestedFile = open(os.path.join(currentDirectory, "www/index.html"), 'r')
-        zipedFile = gzip.GzipFile(os.path.join(currentDirectory, "www/index.html"))
-        # self.wfile.write(requestedFile)
-        # print (requestedFile.read())
+        requestedFile = open(requestedFileLocation, 'r')
 
-        self.request.sendall(zipedFile)
-        # self.request.sendall("OK")
+        responseString = self.createHTMLResponse(requestedFile.read())
+        self.request.sendall(responseString)
+
+    def createHTMLResponse(self, fileContents):
+        timeString = time.strftime("%a, %d %b %Y %H:%M:%S %Z")
+
+        responseString = "HTTP/1.1 200 OK\r\n" \
+        "Date: " + timeString + "\r\n" \
+        "Content-Type: text/css\r\n" \
+        "Content-Length: " + str(len(fileContents)) + "\r\n" \
+        "\r\n" + fileContents + "\r\n" \
+        "\r\n"
+        return responseString
 
 
 
