@@ -1,5 +1,7 @@
 #  coding: utf-8 
 import SocketServer
+import os
+import gzip
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -32,7 +34,18 @@ class MyWebServer(SocketServer.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall("OK")
+
+        currentDirectory = os.getcwd()
+
+        requestedFile = open(os.path.join(currentDirectory, "www/index.html"), 'r')
+        zipedFile = gzip.GzipFile(os.path.join(currentDirectory, "www/index.html"))
+        # self.wfile.write(requestedFile)
+        # print (requestedFile.read())
+
+        self.request.sendall(zipedFile)
+        # self.request.sendall("OK")
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
