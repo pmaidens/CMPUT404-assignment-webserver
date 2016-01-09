@@ -48,19 +48,24 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         wwwDir = os.path.join(currentDirectory, "www")
         requestedFileLocation = os.path.normpath(os.path.join(wwwDir, requestedFileName))
 
-        try:
-            requestedFile = open(requestedFileLocation, 'r')
-        except IOError:
+        if wwwDir not in requestedFileLocation:
             responseString = self.create404()
         else:
-            responseString = self.createHTMLResponse(requestedFile.read())
+            reSearchResult = re.search("(\w+)$", requestedFileName)
+            fileType = reSearchResult.group(0)
+            try:
+                requestedFile = open(requestedFileLocation, 'r')
+            except IOError:
+                responseString = self.create404()
+            else:
+                responseString = self.createHTMLResponse(requestedFile.read(), fileType)
 
         self.request.sendall(responseString)
 
-    def createHTMLResponse(self, fileContents):
+    def createHTMLResponse(self, fileContents, fileType):
         return "HTTP/1.1 200 OK\r\n" \
         "Date: " + self.time() + "\r\n" \
-        "Content-Type: text/css\r\n" \
+        "Content-Type: text/" + fileType + "\r\n" \
         "Content-Length: " + str(len(fileContents)) + "\r\n" \
         "Server: Partial HTTP 1.1 Server\r\n" \
         "Connection: close\r\n" \
