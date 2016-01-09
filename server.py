@@ -1,19 +1,17 @@
-#  coding: utf-8 
+#  coding: utf-8
 import SocketServer
 import os
-import gzip
-import StringIO
 import time
 import re
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,42 +31,51 @@ import re
 
 
 class MyWebServer(SocketServer.BaseRequestHandler):
-    
+
     def handle(self):
 
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
+
+        # Get the absolute path of the requested file
         reSearchResult = re.search(" ([\s\S]+?) ",self.data)
         requestedFileName = reSearchResult.group(0)
         requestedFileName = requestedFileName[1:-1]
-        print (requestedFileName)
-
+        requestedFileName = "./" + requestedFileName
         if requestedFileName.endswith("/"):
             requestedFileName = requestedFileName + "index.html"
-
         currentDirectory = os.getcwd()
-        wwwDir = os.path.join(currentDirectory, "www/")
-        print (wwwDir)
-        requestedFileLocation = os.path.join(wwwDir, requestedFileName)
-        print (requestedFileLocation)
+        wwwDir = os.path.join(currentDirectory, "www")
+        requestedFileLocation = os.path.normpath(os.path.join(wwwDir, requestedFileName))
 
-        requestedFile = open(requestedFileLocation, 'r')
+        try:
+            requestedFile = open(requestedFileLocation, 'r')
+        except IOError:
+            responseString = self.create404()
+        else:
+            responseString = self.createHTMLResponse(requestedFile.read())
 
-        responseString = self.createHTMLResponse(requestedFile.read())
         self.request.sendall(responseString)
 
     def createHTMLResponse(self, fileContents):
-        timeString = time.strftime("%a, %d %b %Y %H:%M:%S %Z")
-
-        responseString = "HTTP/1.1 200 OK\r\n" \
-        "Date: " + timeString + "\r\n" \
+        return "HTTP/1.1 200 OK\r\n" \
+        "Date: " + self.time() + "\r\n" \
         "Content-Type: text/css\r\n" \
         "Content-Length: " + str(len(fileContents)) + "\r\n" \
+        "Server: Partial HTTP 1.1 Server\r\n" \
+        "Connection: close\r\n" \
         "\r\n" + fileContents + "\r\n" \
         "\r\n"
-        return responseString
 
+    def create404(self):
+        return "HTTP/1.1 404 Not Found\r\n" \
+        "Date: " + self.time() + "\r\n" \
+        "Server: Partial HTTP 1.1 Server\r\n" \
+        "Connection: close\r\n" \
+        "\r\n"
 
+    def time(self):
+        return time.strftime("%a, %d %b %Y %H:%M:%S %Z")
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
