@@ -1,10 +1,6 @@
 #  coding: utf-8
-import SocketServer
-import os
-import time
-import re
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Peter Maidens
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +25,10 @@ import re
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+import SocketServer
+import os
+import time
+import re
 
 class MyWebServer(SocketServer.BaseRequestHandler):
 
@@ -37,22 +37,23 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
 
+
         # Get the absolute path of the requested file
+        wwwDir = os.path.join(os.getcwd(), "www")
         reSearchResult = re.search(" ([\s\S]+?) ",self.data)
-        requestedFileName = reSearchResult.group(0)
-        requestedFileName = requestedFileName[1:-1]
-        requestedFileName = "./" + requestedFileName
+        requestedFileName = "./" + reSearchResult.group(0)[1:-1]
+
         if requestedFileName.endswith("/"):
             requestedFileName = requestedFileName + "index.html"
-        currentDirectory = os.getcwd()
-        wwwDir = os.path.join(currentDirectory, "www")
         requestedFileLocation = os.path.normpath(os.path.join(wwwDir, requestedFileName))
 
         if wwwDir not in requestedFileLocation:
             responseString = self.create404()
         else:
+            # Cheap way to figure out mimetype that works for css and html
             reSearchResult = re.search("(\w+)$", requestedFileName)
             fileType = reSearchResult.group(0)
+
             try:
                 requestedFile = open(requestedFileLocation, 'r')
             except IOError:
